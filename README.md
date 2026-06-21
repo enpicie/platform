@@ -1,65 +1,89 @@
-# Infrastructure-Documentation
+# enpicie-platform
 
-Documentation for `enpicie` GitHub org infrastructure.
+**The single source of truth for the enpicie platform.** You are your own platform team — this repo is the front door and the documentation home for the reusable pieces that let you start, deploy, and hand off projects with low cognitive load.
 
-## Core Infrastructure Stack
+> Status: **Bootstrapping.** Start with the **[Platform Spec](./spec/platform.md)** (the glue). See [ROADMAP.md](./ROADMAP.md) for what's next and [docs/audit-2026-06.md](./docs/audit-2026-06.md) for the founding audit.
 
-- **CI/CD Pipelines**: GitHub Actions
-- **Cloud Service Provider**: AWS
-- **Provisioning Tool**: Terraform via OpenTofu
+## What the platform is for (the product)
 
-## Goals
+Three things, in priority order:
 
-- Automate deployments and consume reusable pipeline stages for repeated work
-- Minimize manual steps to obtain proper authorization for each new project
-- Minimize manual steps to update permissions or alter any infrastructure config
-- Avoid committing and exposing sensitive data/credentials
+1. **Centralized docs** — everything needed to understand and deploy a project lives here, in GitHub. No external/private surface required to onboard.
+2. **A plug-and-play starting pipeline** — copy a starter, change a few values, ship. Flexible per project, not rigid.
+3. **One config convention that never changes: a single source of truth for env vars + secrets**, backed by **AWS Secrets Manager** when a project deploys to AWS. → **[docs/env-and-secrets.md](./docs/env-and-secrets.md)** (the keystone).
 
-## Table of Contents
+Everything else about a project can vary by archetype. Those three persist.
 
-- [Architecture Diagram](#architecture-diagram)
-- [GitHub Actions](#github-actions)
-- [OIDC Setup](#oidc-setup)
-- [Migration to OpenTofu](#migration-to-opentofu)
+---
 
-## Architecture Diagram
+## The pieces
 
-![Architecture Diagram](./diagrams/Deployment-Infrastructure.drawio.png)
+A set of composable, versioned building blocks so a new project is **configure, not build**:
 
-- **[gh-action-workflow-terraform-run](https://github.com/enpicie/gh-action-workflow-terraform-run)** is the core reusable GH Actions workflow to conduct Terraform runs for all projects
-  - Owns CloudFormation templates to provision pre-requisite backend for Terraform state management
-  - Allows projects to pass in Terraform variables via `TF_VARS_*` env vars as needed
-- **[aws-tf-iam-roles](https://github.com/enpicie/aws-tf-iam-roles)** manages Terraform config for IAM roles to be assumed for Terraform runs by project pipelines based on configuration needs
-  - Creates roles with permissions for different sets of AWS services for various use cases
-  - Role ARNs are saved as GitHub Organization secrets for projects to use in Actions pipelines
-  - Any new roles/permission needs will be updated in this repo as needed
-- **[aws-infra](https://github.com/enpicie/aws-infra)** manages Terraform config for core shared infrastructure
-  - Primarily VPC, ALB, and ECS cluster
-  - Only houses shared app-independent resources
+- **`gh-action-*`** — reusable GitHub Actions (composite workflows) — the CI building blocks
+- **`tf-module-*`** — reusable Terraform modules (run via OpenTofu) — the infra building blocks
+- **`aws-*`** — core, shared, account-level AWS infrastructure (singletons — see note below)
 
-All core repositories above use one-time manually created IAM roles for permissions required for provisioning their respective resources.
+Apps deploy to AWS via OpenTofu, authenticating with GitHub OIDC and assuming scoped IAM roles. State lives in S3, one file per infrastructure component.
 
-## GitHub Actions
+> **`aws-*` repos are intentionally unversioned.** At personal-org scale they are singletons that just need to exist (the shared VPC/ALB/ECS, the IAM roles). They are not products consumed by version — only the `gh-action-*` and `tf-module-*` pieces are version-pinned.
 
-GitHub Actions workflows can be composed in pipelines to encapsulate units of work that may be reused across different projects. As mentioned above, the core deployment workflow is [gh-action-workflow-terraform-run](https://github.com/enpicie/gh-action-workflow-terraform-run).
+---
 
-Repos named with pattern `gh-action-workflow-*` are Composite Workflows for GitHub Actions pipelines with steps that may be commonly used across projects. Documentation for each action can be found in its repo's README.
+## Platform catalog
 
-- [gh-action-workflow-terraform-run](https://github.com/enpicie/gh-action-workflow-terraform-run) - Run Terraform for given config
-- [gh-action-workflow-build-python-lambda-layer-zip](https://github.com/enpicie/gh-action-workflow-build-python-lambda-layer-zip) - Builds .zip file for Python Lambda Layer
-  - Used to ensure Lambdas have required dependencies at runtime
-- [gh-action-workflow-upload-lambda-zip](https://github.com/enpicie/gh-action-workflow-upload-lambda-zip) - Uploads .zip package for a Lambda to S3
-  - **Should be done via Terraform where possible**
-  - _TODO: determine if adomi-san-bot can be improved to manage Lambda .zip via Terraform alone_
+### Reusable Terraform modules (`tf-module-*`)
+| Repo | Provisions | Latest |
+|---|---|---|
+| [tf-module-s3-cloudfront-website](https://github.com/enpicie/tf-module-s3-cloudfront-website) | Static site: S3 + CloudFront | v1.2.0 |
+| [tf-module-ecs-alb-service](https://github.com/enpicie/tf-module-ecs-alb-service) | Container service on shared ECS + ALB | v1.2.0 |
+| [tf-module-eventbridge-scheduled-lambda](https://github.com/enpicie/tf-module-eventbridge-scheduled-lambda) | Scheduled Lambda via EventBridge | tag TBD |
+| `tf-module-app-config` *(planned)* | `{app}/{env}` Secrets Manager container + scoped IAM (the keystone) | — |
 
-## OIDC Setup
+### Reusable GitHub Actions (`gh-action-*`)
+| Repo | Does | Latest |
+|---|---|---|
+| [gh-action-workflow-terraform-run](https://github.com/enpicie/gh-action-workflow-terraform-run) | OpenTofu plan/apply via OIDC (the core deploy step) | v1.0.0 |
+| [gh-action-workflow-s3-upload](https://github.com/enpicie/gh-action-workflow-s3-upload) | Upload build artifact to S3 (hashed-filename cleanup) | v1.0.1 |
+| [gh-action-workflow-build-python-lambda-layer-zip](https://github.com/enpicie/gh-action-workflow-build-python-lambda-layer-zip) | Build + zip Python Lambda layer → S3 | tag TBD |
+| [gh-action-workflow-upload-lambda-zip](https://github.com/enpicie/gh-action-workflow-upload-lambda-zip) | Zip Lambda source → S3 | tag TBD |
+| [gh-action-workflow-terraform-destroy](https://github.com/enpicie/gh-action-workflow-terraform-destroy) | Gated teardown of applied configs | tag TBD |
+| `gh-action-validate-config` *(planned)* | Fail-fast if a required secret is missing pre-deploy | — |
 
-All roles share a trust relationship that allows GitHub actions to authenticate to AWS and assume a role based on a given ARN. Since HCP Terraform is no longer used, AWS only needs to establish trust with the GitHub Actions agent via OIDC Provider for GitHub.
+### Core infrastructure (`aws-*`, singletons, unversioned by design)
+| Repo | Purpose |
+|---|---|
+| [aws-infra](https://github.com/enpicie/aws-infra) | Shared VPC, ALB, ECS cluster |
+| [aws-tf-iam-roles](https://github.com/enpicie/aws-tf-iam-roles) | Scoped IAM roles for Terraform runs (ARNs → org secrets) |
 
-_This OIDC provider was manually created in AWS._
+### Apps & archetypes
+| Repo | Stack | Status / archetype |
+|---|---|---|
+| [find-my-fgc](https://github.com/enpicie/find-my-fgc) | TS frontend + backend on AWS | Shipped — **reference impl** (`static-frontend` + AWS backend) |
+| [adomi-san-bot](https://github.com/enpicie/adomi-san-bot) | Python Discord bot, Lambda + scheduled job | Shipped — `bot` / `scheduled-job` |
+| [fgc-league-sheets](https://github.com/enpicie/fgc-league-sheets) | TS Google Apps Script (clasp): React sidebar + server | Shipped — `apps-script` (clasp push, no AWS/TF) |
+| [seeding-mcp-server](https://github.com/enpicie/seeding-mcp-server) | Python MCP server | Shipped |
+| seeding tool (new) | Full-stack TS (frontend + API) | Planned — Vercel/Railway candidate ([ADR-002](./docs/decisions/ADR-002-deployment-target-decision-tree.md)) |
+| [dia](https://github.com/enpicie/dia) | Turborepo TS | **Experimental — actively rebuilding, ignore for now** |
 
-## Migration to [OpenTofu](https://opentofu.org/)
+---
 
-OpenTofu is built on Terraform and intended to continue enabling the use of Terraform in various projects as Hashicorp has and may continue to change its licensing.
+## Onboarding: deploy a new project
 
-In other words, it is basically a wrapper for Terraform CLI. Thus, the migration from HCP Terraform to OpenTofu via GitHub Actions was done to remove the obstructive layer of HCP Terraform and manage runs more manually but directly.
+1. **Pick an archetype** — `static-frontend`, `container-backend`, `scheduled-job`, `full-stack-js`, `bot`, `apps-script`.
+2. **Confirm AWS account bootstrap exists** (AWS projects) — S3 state bucket + DynamoDB lock + GitHub OIDC provider + scoped IAM role ARNs in org secrets. See [docs/bootstrap.md](./docs/bootstrap.md) *(planned)*.
+3. **Scaffold from the archetype starter** in [templates/](./templates) *(growing)*.
+4. **Declare config once** in `config/app-config.yaml` → [the keystone](./docs/env-and-secrets.md). Set `.github/deployment.env` (`APP_NAME`, `AWS_REGION`, `DEPLOYMENT_ENV`).
+5. **Push secret values** to AWS Secrets Manager (`make secrets-push`) — never into code or state.
+6. **Tag a release** — the pipeline runs `config → build → deploy`.
+
+For full-stack JS apps, the target may instead be **Vercel + Railway + Supabase** — see [ADR-002](./docs/decisions/ADR-002-deployment-target-decision-tree.md).
+
+---
+
+## Docs map
+- **[spec/platform.md](./spec/platform.md)** — the platform spec: the glue an agent (or human) follows to build/deploy/onboard a project
+- [docs/env-and-secrets.md](./docs/env-and-secrets.md) — the keystone config convention
+- [docs/decisions/](./docs/decisions) — ADRs (cross-repo architecture decisions; see [ADR-004](./docs/decisions/ADR-004-spec-driven-glue.md) for the spec-vs-code thesis)
+- [ROADMAP.md](./ROADMAP.md) · [docs/audit-2026-06.md](./docs/audit-2026-06.md) (founding audit snapshot)
+- [docs/infrastructure-reference.md](./docs/infrastructure-reference.md) — deep AWS infra reference (architecture diagram, OIDC, OpenTofu migration); folded in from the former `Infrastructure-Documentation` repo

@@ -1,0 +1,51 @@
+# app-config.yaml — single source of truth for this project's env vars + secrets.
+#
+# COMMITTED. Declares names + shape only — NEVER values.
+# Drives: .env.example generation, AWS Secrets Manager provisioning,
+# runtime wiring, and CI validation. See docs/env-and-secrets.md.
+#
+# Copy this file to `config/app-config.yaml` in a new project and edit.
+
+app: my-app            # matches APP_NAME in .github/deployment.env
+
+vars:
+  # --- non-secret config (plain env in all environments) ---
+  - name: AWS_REGION
+    desc: AWS region to deploy into
+    secret: false
+    scope: [build, runtime]   # build | runtime | both — where the value is consumed
+    required: true
+
+  - name: DEPLOYMENT_ENV
+    desc: Environment name (prod)
+    secret: false
+    scope: [build, runtime]
+    required: true
+
+  - name: LOG_LEVEL
+    desc: Structured logger level
+    secret: false
+    scope: [runtime]
+    required: false
+    default: info
+
+  # --- secrets (AWS Secrets Manager on AWS; native store elsewhere) ---
+  # On AWS these resolve from the JSON secret `{app}/{env}` — one fetch, one IAM grant.
+  - name: EXAMPLE_API_TOKEN
+    desc: Third-party API token used by the backend at runtime
+    secret: true
+    scope: [runtime]
+    required: true
+
+  - name: DATABASE_URL
+    desc: Database connection string
+    secret: true
+    scope: [runtime]
+    required: true
+
+# Notes:
+# - secret: true  → stored in AWS Secrets Manager (key inside the {app}/{env} JSON
+#   secret), fetched at runtime (Lambda extension / ECS valueFrom). Never plaintext env.
+# - secret: false → plain env, sourced from deployment.env / this manifest.
+# - Values for local dev go in .env.local (gitignored). `make config-check`
+#   verifies .env.local has every required key declared here.
