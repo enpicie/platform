@@ -38,7 +38,7 @@ Apps deploy to AWS via OpenTofu, authenticating with GitHub OIDC and assuming sc
 | [tf-module-s3-cloudfront-website](https://github.com/enpicie/tf-module-s3-cloudfront-website) | Static site: S3 + CloudFront | v1.2.0 |
 | [tf-module-ecs-alb-service](https://github.com/enpicie/tf-module-ecs-alb-service) | Container service on shared ECS + ALB | v1.2.0 |
 | [tf-module-eventbridge-scheduled-lambda](https://github.com/enpicie/tf-module-eventbridge-scheduled-lambda) | Scheduled Lambda via EventBridge | tag TBD |
-| `tf-module-app-config` *(planned)* | `{app}/{env}` Secrets Manager container + scoped IAM (the keystone) | — |
+| [tf-module-app-config](https://github.com/enpicie/tf-module-app-config) | `{app}/{env}` Secrets Manager container + scoped IAM (the keystone) | v0.1.0 |
 
 ### Reusable GitHub Actions (`gh-action-*`)
 | Repo | Does | Latest |
@@ -48,7 +48,7 @@ Apps deploy to AWS via OpenTofu, authenticating with GitHub OIDC and assuming sc
 | [gh-action-workflow-build-python-lambda-layer-zip](https://github.com/enpicie/gh-action-workflow-build-python-lambda-layer-zip) | Build + zip Python Lambda layer → S3 | tag TBD |
 | [gh-action-workflow-upload-lambda-zip](https://github.com/enpicie/gh-action-workflow-upload-lambda-zip) | Zip Lambda source → S3 | tag TBD |
 | [gh-action-workflow-terraform-destroy](https://github.com/enpicie/gh-action-workflow-terraform-destroy) | Gated teardown of applied configs | tag TBD |
-| `gh-action-validate-config` *(planned)* | Fail-fast if a required secret is missing pre-deploy | — |
+| [gh-action-validate-config](https://github.com/enpicie/gh-action-validate-config) | Fail-fast if a required secret is missing pre-deploy | v0.1.0 |
 
 ### Core infrastructure (`aws-*`, singletons, unversioned by design)
 | Repo | Purpose |

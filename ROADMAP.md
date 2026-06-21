@@ -11,10 +11,10 @@ Sequenced backlog to reach the desired state: **centralized docs + a plug-and-pl
 
 Design is written: [docs/env-and-secrets.md](./docs/env-and-secrets.md) · [ADR-003](./docs/decisions/ADR-003-env-secrets-single-source-of-truth.md) · manifest template in [templates/app-config.example.yaml](./templates/app-config.example.yaml).
 
-- [ ] Build **`tf-module-app-config`** — creates the `{app}/{env}` Secrets Manager container + scoped `GetSecretValue` IAM policy for the app's execution role. Manages container + IAM only; **never the value**.
-- [ ] Build **`gh-action-validate-config`** — reads `config/app-config.yaml`, fails the deploy if any `required` secret key is missing from Secrets Manager.
+- [x] Build **[`tf-module-app-config`](https://github.com/enpicie/tf-module-app-config)** `@v0.1.0` — `{app}/{env}` Secrets Manager container + scoped `GetSecretValue` IAM. Container + IAM only; never the value.
+- [x] Build **[`gh-action-validate-config`](https://github.com/enpicie/gh-action-validate-config)** `@v0.1.0` — fails the deploy if a `required` secret key is missing from Secrets Manager.
 - [ ] Add Make targets to the standard Makefile: `config` (regen `.env.example` from manifest), `config-check` (`.env.local` has all required keys), `secrets-push` (push secret values from `.env.local` to Secrets Manager).
-- [ ] Migrate **`adomi-san-bot`** off the value-in-state pattern → manifest + module (proves the design on a real app).
+- [ ] Migrate **`adomi-san-bot`** off the value-in-state pattern → manifest + module (draft PR open; needs the owner's `terraform plan`/apply + runtime-fetch code change to land — see report).
 
 Done when: adding a secret = one manifest line + `make secrets-push`, and no secret value touches code or Terraform state in any project.
 

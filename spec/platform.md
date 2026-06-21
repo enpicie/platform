@@ -30,7 +30,7 @@ Pin every reference to a version tag. Never `@main`.
 | `enpicie/gh-action-workflow-build-python-lambda-layer-zip` | Build/zip Python Lambda layer → S3 | pin latest tag |
 | `enpicie/gh-action-workflow-upload-lambda-zip` | Zip Lambda source → S3 | pin latest tag |
 | `enpicie/gh-action-workflow-terraform-destroy` | Gated teardown | pin latest tag |
-| `enpicie/gh-action-validate-config` *(planned)* | Fail-fast if a required secret is missing pre-deploy | pin when built |
+| `enpicie/gh-action-validate-config` | Fail-fast if a required secret is missing pre-deploy | `@v0.1.0` |
 
 ### Terraform modules (`tf-module-*`)
 | Module | Provisions | Pin |
@@ -38,7 +38,7 @@ Pin every reference to a version tag. Never `@main`.
 | `tf-module-s3-cloudfront-website` | Static site: S3 + CloudFront | `@v1.2.0` |
 | `tf-module-ecs-alb-service` | Container service on shared ECS + ALB | `@v1.2.0` |
 | `tf-module-eventbridge-scheduled-lambda` | Scheduled Lambda via EventBridge | pin latest tag |
-| `tf-module-app-config` *(planned)* | `{app}/{env}` Secrets Manager container + scoped IAM (keystone) | pin when built |
+| `tf-module-app-config` | `{app}/{env}` Secrets Manager container + scoped IAM (keystone) | `@v0.1.0` |
 
 ### Core infrastructure (`aws-*`, singletons — assume they exist, never recreate)
 - `aws-infra` — shared VPC, ALB, ECS cluster.
